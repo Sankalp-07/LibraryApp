@@ -6,7 +6,7 @@ export const GLOBAL = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
   },
   title: {
     fontSize: TYPOGRAPHY.fontSizeLarge,

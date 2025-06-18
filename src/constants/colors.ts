@@ -7,4 +7,5 @@ export const COLORS = {
   border: '#E5E7EB',
   placeholder: '#A0AEC0',
   disabled: '#A0AEC0',
+  brown: '#966634', // Added for login card background
 }; 
