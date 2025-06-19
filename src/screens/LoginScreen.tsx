@@ -1,7 +1,7 @@
 // React Native Login Screen Component
 // Copy this code to your React Native project
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import SimpleReactValidator from 'simple-react-validator';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
@@ -21,21 +22,29 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [, forceUpdate] = useState();
+
+  const validator = useRef(new SimpleReactValidator({ autoForceUpdate: { forceUpdate: () => forceUpdate({}) } }));
 
   const handleLogin = async () => {
-    setIsLoading(true);
-    // Your login logic here
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+    if (validator.current.allValid()) {
+      setIsLoading(true);
+      // Your login logic here
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1500);
+    } else {
+      validator.current.showMessages();
+      forceUpdate({});
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { flex: 1 }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={{ flex: 1 }}
       >
         <View style={styles.content}>
           {/* Header Section */}
@@ -58,12 +67,18 @@ const LoginScreen = () => {
                   placeholder="Enter your email"
                   placeholderTextColor="#9CA3AF"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={text => {
+                    setEmail(text);
+                    validator.current.showMessageFor('email');
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
                 />
               </View>
+              <Text style={{ color: 'red', minHeight: 20 }}>
+                {validator.current.message('email', email, 'required|email')}
+              </Text>
             </View>
 
             {/* Password Input */}
@@ -75,7 +90,10 @@ const LoginScreen = () => {
                   placeholder="Enter your password"
                   placeholderTextColor="#9CA3AF"
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={text => {
+                    setPassword(text);
+                    validator.current.showMessageFor('password');
+                  }}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
                 />
@@ -88,6 +106,9 @@ const LoginScreen = () => {
                   </Text>
                 </TouchableOpacity>
               </View>
+              <Text style={{ color: 'red', minHeight: 20 }}>
+                {validator.current.message('password', password, 'required|min:6')}
+              </Text>
             </View>
 
             {/* Forgot Password */}
@@ -139,17 +160,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  keyboardView: {
-    flex: 1,
-  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center',
+    paddingTop: 24,
+    paddingBottom: 64,
+    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
   },
   iconContainer: {
     width: 80,
@@ -184,7 +204,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    marginBottom: 32,
+    marginBottom: 16,
   },
   inputGroup: {
     marginBottom: 20,
@@ -264,7 +284,7 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 32,
+    marginVertical: 16,
   },
   dividerLine: {
     flex: 1,
@@ -308,7 +328,13 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 12,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingBottom: 24,
+    backgroundColor: '#F8FAFC',
   },
   footerText: {
     fontSize: 14,

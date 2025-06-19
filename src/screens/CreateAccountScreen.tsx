@@ -26,6 +26,14 @@ const CreateAccountScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    password: '',
+    confirmPassword: '',
+  });
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -34,7 +42,50 @@ const CreateAccountScreen = () => {
     }));
   };
 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const validatePhone = (phone: string) => {
+    const re = /^\d{10,15}$/;
+    return re.test(phone);
+  };
+
+  const validateForm = () => {
+    let errors: any = {};
+    if (!formData.name.trim()) {
+      errors.name = 'Full name is required.';
+    }
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required.';
+    } else if (!validateEmail(formData.email)) {
+      errors.email = 'Invalid email address.';
+    }
+    if (!formData.phone.trim()) {
+      errors.phone = 'Phone number is required.';
+    } else if (!validatePhone(formData.phone)) {
+      errors.phone = 'Invalid phone number.';
+    }
+    if (!formData.address.trim()) {
+      errors.address = 'Address is required.';
+    }
+    if (!formData.password) {
+      errors.password = 'Password is required.';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters.';
+    }
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password.';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match.';
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCreateAccount = async () => {
+    if (!validateForm()) return;
     setIsLoading(true);
     // Your account creation logic here
     setTimeout(() => {
@@ -79,6 +130,7 @@ const CreateAccountScreen = () => {
                     autoComplete="name"
                   />
                 </View>
+                {formErrors.name ? <Text style={styles.errorText}>{formErrors.name}</Text> : null}
               </View>
 
               {/* Email Input */}
@@ -96,6 +148,7 @@ const CreateAccountScreen = () => {
                     autoComplete="email"
                   />
                 </View>
+                {formErrors.email ? <Text style={styles.errorText}>{formErrors.email}</Text> : null}
               </View>
 
               {/* Phone Input */}
@@ -112,6 +165,7 @@ const CreateAccountScreen = () => {
                     autoComplete="tel"
                   />
                 </View>
+                {formErrors.phone ? <Text style={styles.errorText}>{formErrors.phone}</Text> : null}
               </View>
 
               {/* Address Input */}
@@ -130,6 +184,7 @@ const CreateAccountScreen = () => {
                     autoComplete="street-address"
                   />
                 </View>
+                {formErrors.address ? <Text style={styles.errorText}>{formErrors.address}</Text> : null}
               </View>
 
               {/* Password Input */}
@@ -154,6 +209,7 @@ const CreateAccountScreen = () => {
                     </Text>
                   </TouchableOpacity>
                 </View>
+                {formErrors.password ? <Text style={styles.errorText}>{formErrors.password}</Text> : null}
               </View>
 
               {/* Confirm Password Input */}
@@ -178,6 +234,7 @@ const CreateAccountScreen = () => {
                     </Text>
                   </TouchableOpacity>
                 </View>
+                {formErrors.confirmPassword ? <Text style={styles.errorText}>{formErrors.confirmPassword}</Text> : null}
               </View>
 
               {/* Terms and Conditions */}
@@ -429,6 +486,12 @@ const styles = StyleSheet.create({
   loginText: {
     color: '#6366F1',
     fontWeight: '600',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
 
