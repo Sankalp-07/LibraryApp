@@ -7,7 +7,7 @@ import { COLORS } from '../constants/colors';
 import { Calendar } from 'react-native-calendars';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
-import { bookSeats } from '../store/bookingSlice';
+import { bookSeats, editBooking } from '../store/bookingSlice';
 
 // Navigation params type
 export type SeatBookingParams = {
@@ -15,6 +15,10 @@ export type SeatBookingParams = {
     roomId: string;
     roomName: string;
     total: number;
+    selectedSeats?: number[];
+    startDate?: string;
+    endDate?: string;
+    bookingId?: string;
   };
 };
 
@@ -26,12 +30,15 @@ const getToday = () => {
 const SeatBookingScreen = () => {
   const route = useRoute<RouteProp<SeatBookingParams, 'SeatBooking'>>();
   const navigation = useNavigation<any>();
-  const { roomId, roomName, total } = route.params || {};
+  const { roomId, roomName, total, selectedSeats = [], startDate, endDate, bookingId } = route.params || {};
   const dispatch = useDispatch();
   const bookings = useSelector((state: RootState) => state.booking.bookings);
   const userId = 'user1'; // TODO: Replace with real user logic
 
-  const [selectedRange, setSelectedRange] = useState<{startDate: string | null, endDate: string | null}>({ startDate: null, endDate: null });
+  const [selectedRange, setSelectedRange] = useState<{startDate: string | null, endDate: string | null}>({
+    startDate: startDate || null,
+    endDate: endDate || null,
+  });
 
   // Helper to get all booked seats for the selected room on any date
   const getBookedSeatsAnyDate = () => {
@@ -65,7 +72,11 @@ const SeatBookingScreen = () => {
       let row = [];
       for (let c = 0; c < NUM_COLS; c++) {
         if (seatNum < (total || 30)) {
-          row.push(0);
+          if (selectedSeats.includes(seatNum)) {
+            row.push(1); // selected (editing)
+          } else {
+            row.push(0); // available
+          }
         }
         seatNum++;
       }
@@ -82,8 +93,10 @@ const SeatBookingScreen = () => {
     for (let r = 0; r < NUM_ROWS; r++) {
       let row = [];
       for (let c = 0; c < NUM_COLS; c++) {
-        if (bookedSeats.includes(seatNum)) {
-          row.push(2); // booked
+        if (bookedSeats.includes(seatNum) && !selectedSeats.includes(seatNum)) {
+          row.push(2); // booked (not user's own selection)
+        } else if (selectedSeats.includes(seatNum)) {
+          row.push(1); // selected (editing)
         } else {
           row.push(0); // available
         }
@@ -92,6 +105,7 @@ const SeatBookingScreen = () => {
       arr.push(row);
     }
     setSeats(arr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, roomId, NUM_ROWS, NUM_COLS, total]);
 
   const [calendarVisible, setCalendarVisible] = useState(false);
@@ -171,18 +185,28 @@ const SeatBookingScreen = () => {
       return;
     }
     // Dispatch booking to Redux
-    dispatch(bookSeats({
-      userId,
-      roomId,
-      seatNumbers: selectedSeats,
-      fromDate: selectedRange.startDate,
-      toDate: selectedRange.endDate,
-    }));
+    if (bookingId) {
+      dispatch(editBooking({
+        userId,
+        roomId,
+        seatNumbers: selectedSeats,
+        fromDate: selectedRange.startDate,
+        toDate: selectedRange.endDate,
+      }));
+    } else {
+      dispatch(bookSeats({
+        userId,
+        roomId,
+        seatNumbers: selectedSeats,
+        fromDate: selectedRange.startDate,
+        toDate: selectedRange.endDate,
+      }));
+    }
     Alert.alert('Booking Confirmed', `Seats: ${selectedSeats.length}\nFrom: ${selectedRange.startDate}\nTo: ${selectedRange.endDate}`);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <SafeAreaView style={styles.mainBackground}>
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -191,12 +215,12 @@ const SeatBookingScreen = () => {
         <Text style={styles.topBarTitle}>Room</Text>
         <View style={{ width: 32 }} />
       </View>
-      {/* Room Name Label */}
-      <View style={styles.roomLabelWrap}>
+      {/* Room Name Card */}
+      <View style={styles.card}>
         <Text style={styles.roomLabel}>{roomName}</Text>
       </View>
       {/* Legend */}
-      <View style={styles.legendRow}>
+      <View style={[styles.card, { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 12, marginBottom: 8 }]}> 
         <View style={styles.legendItem}>
           <View style={[styles.legendColor, { backgroundColor: '#684D2D' }]} />
           <Text style={styles.legendText}>Available</Text>
@@ -210,8 +234,8 @@ const SeatBookingScreen = () => {
           <Text style={styles.legendText}>Booked</Text>
         </View>
       </View>
-      {/* Seat Grid */}
-      <View style={styles.seatGridWrap}>
+      {/* Seat Grid Card */}
+      <View style={[styles.card, styles.seatGridWrap]}>
         {seats.map((row, rIdx) => (
           <View key={rIdx} style={styles.seatRow}>
             {row.map((seat, cIdx) => {
@@ -236,8 +260,8 @@ const SeatBookingScreen = () => {
           </View>
         ))}
       </View>
-      {/* Date Selection */}
-      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+      {/* Date Selection Card */}
+      <View style={[styles.card, { alignItems: 'center', marginBottom: 16 }]}>       
         <Button
           text={selectedRange.startDate && selectedRange.endDate
             ? `From: ${selectedRange.startDate}  To: ${selectedRange.endDate}`
@@ -245,7 +269,7 @@ const SeatBookingScreen = () => {
               ? `Selected: ${selectedRange.startDate}`
               : 'Select Date(s)'}
           onPress={() => setCalendarVisible(true)}
-          style={{ marginBottom: 8, width: 200 }}
+          style={styles.dateBtn}
         />
         <Modal
           visible={calendarVisible}
@@ -270,7 +294,7 @@ const SeatBookingScreen = () => {
               <Button
                 text="OK"
                 onPress={() => setCalendarVisible(false)}
-                style={{ marginTop: 16, width: 120 }}
+                style={{ marginTop: 16, width: 120, backgroundColor: '#6C63FF', borderRadius: 12 }}
               />
             </View>
           </View>
@@ -283,14 +307,24 @@ const SeatBookingScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  mainBackground: {
+    flex: 1,
+    backgroundColor: '#F8F9FD',
+  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#684D2D',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    backgroundColor: '#6C63FF',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   backBtn: {
     width: 32,
@@ -310,25 +344,25 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  roomLabelWrap: {
-    alignItems: 'center',
-    marginVertical: 16,
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    marginTop: 16,
   },
   roomLabel: {
-    backgroundColor: '#684D2D',
-    color: '#fff',
+    color: '#6C63FF',
     fontSize: 22,
     fontWeight: '700',
-    borderRadius: 16,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    overflow: 'hidden',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 12,
-    gap: 24,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   legendItem: {
     flexDirection: 'row',
@@ -343,11 +377,13 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 14,
-    color: COLORS.text,
+    color: '#6C63FF',
+    fontWeight: '600',
   },
   seatGridWrap: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 0,
+    paddingVertical: 12,
   },
   seatRow: {
     flexDirection: 'row',
@@ -361,12 +397,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
   },
+  dateBtn: {
+    marginBottom: 8,
+    width: 200,
+    backgroundColor: '#6C63FF',
+    borderRadius: 12,
+  },
   bookBtn: {
-    backgroundColor: '#684D2D',
+    backgroundColor: '#6C63FF',
     borderRadius: 16,
     marginHorizontal: 32,
     marginTop: 8,
     paddingVertical: 16,
+    marginBottom: 24,
   },
 });
 

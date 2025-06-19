@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Alert, RefreshControl, StatusBar } from 'react-native';
 import { Card } from '../components/common';
-import { GLOBAL } from '../styles/global';
 import { COLORS } from '../constants/colors';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useNavigation } from '@react-navigation/native';
 
-// Map roomId to library name (placeholder)
 const ROOM_ID_TO_NAME: Record<string, string> = {
   '1': 'Reading Hall',
   '2': 'Reference Room',
@@ -52,11 +50,8 @@ const BookingsScreen = () => {
         to: b.toDate,
       };
     } else {
-      // Combine seat numbers
       groupedByRoom[b.roomId].seatNumbers = Array.from(new Set([...groupedByRoom[b.roomId].seatNumbers, ...b.seatNumbers]));
-      // Update from (earliest)
       if (b.fromDate < groupedByRoom[b.roomId].from) groupedByRoom[b.roomId].from = b.fromDate;
-      // Update to (latest)
       if (b.toDate > groupedByRoom[b.roomId].to) groupedByRoom[b.roomId].to = b.toDate;
     }
   });
@@ -82,10 +77,10 @@ const BookingsScreen = () => {
     navigation.navigate('SeatBooking', {
       roomId: booking.roomId,
       roomName: booking.library,
-      total: room ? room.total : 30, // fallback to 30 if not found
+      total: room ? room.total : 30,
       selectedSeats: booking.seatNumbers,
-      fromDate: booking.from,
-      toDate: booking.to,
+      startDate: booking.from,
+      endDate: booking.to,
     });
   };
   const handleDelete = (id: string) => {
@@ -93,23 +88,41 @@ const BookingsScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#684D2D' }}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bookings</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.welcomeText}>Your</Text>
+            <Text style={styles.userName}>Bookings</Text>
+          </View>
+          <TouchableOpacity style={styles.profileButton} activeOpacity={0.8}>
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      {/* Info Banners */}
-      <View style={styles.infoBannerRed}>
-        <Text style={styles.infoIcon}>❗</Text>
-        <Text style={styles.infoTextRed}>Yes! you can cancel your booked seats before 5 days of booked from the from date.</Text>
-      </View>
-      <View style={styles.infoBannerGreen}>
-        <Text style={styles.infoIcon}>📝</Text>
-        <Text style={styles.infoTextGreen}>Yes! you can Change your booked seats before 5 days of booked from the from date.</Text>
-      </View>
-      {/* Pull to Refresh Label */}
-      <Text style={styles.refreshLabel}>🔄 Pull to refresh</Text>
-      {/* Booking List */}
+
       <FlatList
+        ListHeaderComponent={
+          <>
+            {/* Info Cards */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statsRow}>
+                <View style={[styles.statCard, styles.editCard]}>
+                  <Text style={styles.statCardIcon}>📝</Text>
+                  <Text style={styles.statCardLabel}>You can change your booked seats before 5 days of the from date.</Text>
+                </View>
+                <View style={[styles.statCard, styles.deleteCard]}>
+                  <Text style={styles.statCardIcon}>❗</Text>
+                  <Text style={styles.statCardLabel}>You can cancel your booked seats before 5 days of the from date.</Text>
+                </View>
+              </View>
+            </View>
+            {/* Pull to Refresh Label */}
+            <Text style={styles.refreshLabel}>🔄 Pull to refresh</Text>
+          </>
+        }
         data={bookings}
         keyExtractor={item => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -117,10 +130,17 @@ const BookingsScreen = () => {
         renderItem={({ item }) => {
           const editable = canEditOrDelete(item.from);
           return (
-            <Card style={styles.bookingCard}>
-              <Text style={styles.libraryName}>{item.library}</Text>
+            <View style={styles.bookingCard}>
+              <View style={styles.bookingHeader}>
+                <View style={styles.bookingIconContainer}>
+                  <Text style={styles.bookingIcon}>📚</Text>
+                </View>
+                <View style={styles.bookingInfo}>
+                  <Text style={styles.libraryName}>{item.library}</Text>
+                  <Text style={styles.bookingCapacity}>Seats: {item.seats}</Text>
+                </View>
+              </View>
               <View style={styles.row}>
-                <Text style={styles.label}>Booked Seats: <Text style={styles.value}>{item.seats}</Text></Text>
                 <Text style={styles.label}>From: <Text style={styles.value}>{item.from}</Text></Text>
                 <Text style={styles.label}>To: <Text style={styles.value}>{item.to}</Text></Text>
               </View>
@@ -140,7 +160,7 @@ const BookingsScreen = () => {
                   <Text style={[styles.actionIcon, { color: editable ? '#EF4444' : COLORS.placeholder }]}>🗑️</Text>
                 </TouchableOpacity>
               </View>
-            </Card>
+            </View>
           );
         }}
         ListEmptyComponent={() => (
@@ -154,56 +174,98 @@ const BookingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  header: {
-    marginTop: 24,
-    marginBottom: 8,
-    alignItems: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  headerTitle: {
+  header: {
+    backgroundColor: '#6366F1',
+    paddingTop: 20,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 16,
+    color: '#E0E7FF',
+    marginBottom: 4,
+  },
+  userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
-    marginBottom: 8,
+    color: '#FFFFFF',
   },
-  infoBannerRed: {
-    flexDirection: 'row',
+  profileButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff0f0',
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginBottom: 6,
-    padding: 8,
-    elevation: 2,
   },
-  infoBannerGreen: {
+  profileIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  statsContainer: {
+    paddingHorizontal: 24,
+    marginTop: -15,
+    marginBottom: 16,
+  },
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fff0',
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 8,
-    elevation: 2,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  infoIcon: {
-    fontSize: 18,
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+  },
+  deleteCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  statCardIcon: {
+    fontSize: 20,
     marginRight: 8,
   },
-  infoTextRed: {
-    color: '#EF4444',
-    fontSize: 14,
+  statCardLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
     flex: 1,
-  },
-  infoTextGreen: {
-    color: '#22C55E',
-    fontSize: 14,
-    flex: 1,
+    flexWrap: 'wrap',
   },
   refreshLabel: {
-    color: '#fff',
+    color: '#6366F1',
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 8,
+    fontWeight: '500',
   },
   listContainer: {
     paddingBottom: 24,
@@ -211,19 +273,44 @@ const styles = StyleSheet.create({
   },
   bookingCard: {
     marginBottom: 16,
-    backgroundColor: '#fff8f0',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
+    padding: 20,
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  bookingIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  bookingIcon: {
+    fontSize: 20,
+  },
+  bookingInfo: {
+    flex: 1,
   },
   libraryName: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: 6,
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  bookingCapacity: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   row: {
     flexDirection: 'row',
@@ -238,12 +325,13 @@ const styles = StyleSheet.create({
   },
   value: {
     fontWeight: '700',
-    color: COLORS.primary,
+    color: '#6366F1',
   },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
+    marginTop: 4,
   },
   actionBtn: {
     backgroundColor: '#fff',
@@ -273,4 +361,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BookingsScreen; 
+export default BookingsScreen;

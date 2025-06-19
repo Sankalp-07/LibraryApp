@@ -37,13 +37,13 @@ const MainTabs = () => (
         return (
           <Image
             source={iconSource}
-            style={{ width: 24, height: 24, resizeMode: 'contain', tintColor: focused ? '#000000' : '#808080' }}
+            style={{ width: 24, height: 24, resizeMode: 'contain', tintColor: focused ? '#6366F1' : '#808080' }}
           />
         );
       },
       tabBarShowLabel: true,
       headerShown: false,
-      tabBarActiveTintColor: '#000000', 
+      tabBarActiveTintColor: '#6366F1', 
     })}
   >
     <Tab.Screen 
@@ -76,7 +76,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isLoggedIn ? (
+        {!isLoggedIn ? (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="CreateAccount" component={CreateAccountScreen} />

@@ -1,92 +1,166 @@
 import React from 'react';
-import { View, Text, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, SafeAreaView, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Button } from '../components/common';
-import { GLOBAL } from '../styles/global';
 import { COLORS } from '../constants/colors';
 
 const ProfileScreen = () => {
   return (
-    <SafeAreaView style={GLOBAL.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
-      <View style={styles.profileSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JD</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <TouchableOpacity style={styles.profileButton} activeOpacity={0.8}>
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.userName}>John Doe</Text>
-        <Text style={styles.userEmail}>john.doe@example.com</Text>
       </View>
-      <View style={styles.menuSection}>
-        <Button text="Edit Profile" onPress={() => {}} style={styles.menuButton} textStyle={styles.menuText} />
-        <Button text="Reading History" onPress={() => {}} style={styles.menuButton} textStyle={styles.menuText} />
-        <Button text="Notifications" onPress={() => {}} style={styles.menuButton} textStyle={styles.menuText} />
-        <Button text="Settings" onPress={() => {}} style={styles.menuButton} textStyle={styles.menuText} />
-      </View>
-      <Button text="Log Out" onPress={() => {}} style={styles.logoutButton} textStyle={styles.logoutText} />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>JD</Text>
+          </View>
+          <Text style={styles.userName}>John Doe</Text>
+          <Text style={styles.userEmail}>john.doe@example.com</Text>
+        </View>
+        {/* Menu Section */}
+        <View style={styles.menuSection}>
+          <TouchableOpacity style={styles.menuCard} activeOpacity={0.8}>
+            <Text style={styles.menuIcon}>✏️</Text>
+            <Text style={styles.menuText}>Edit Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuCard} activeOpacity={0.8}>
+            <Text style={styles.menuIcon}>📖</Text>
+            <Text style={styles.menuText}>Reading History</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuCard} activeOpacity={0.8}>
+            <Text style={styles.menuIcon}>🔔</Text>
+            <Text style={styles.menuText}>Notifications</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuCard} activeOpacity={0.8}>
+            <Text style={styles.menuIcon}>⚙️</Text>
+            <Text style={styles.menuText}>Settings</Text>
+          </TouchableOpacity>
+        </View>
+        <Button text="Log Out" onPress={() => {}} style={styles.logoutButton} textStyle={styles.logoutText} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   header: {
-    marginTop: 24,
-    marginBottom: 8,
+    backgroundColor: '#6366F1',
+    paddingTop: 20,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: 8,
+    color: '#FFFFFF',
   },
-  profileSection: {
+  profileButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+  },
+  profileIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 40,
+  },
+  profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 36,
     color: '#fff',
     fontWeight: '700',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
     marginTop: 4,
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.placeholder,
     marginTop: 2,
   },
   menuSection: {
     marginBottom: 24,
+    gap: 12,
   },
-  menuButton: {
-    backgroundColor: COLORS.backgroundAlt,
-    marginVertical: 4,
+  menuCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 4,
+  },
+  menuIcon: {
+    fontSize: 20,
+    marginRight: 16,
   },
   menuText: {
-    color: COLORS.text,
+    color: '#1F2937',
     fontSize: 16,
     fontWeight: '600',
   },
   logoutButton: {
-    backgroundColor: '#ff3b30',
+    backgroundColor: '#EF4444',
     borderRadius: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     marginTop: 8,
+    marginBottom: 24,
+    elevation: 2,
   },
   logoutText: {
     color: '#fff',
