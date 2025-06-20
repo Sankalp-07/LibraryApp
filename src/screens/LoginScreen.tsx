@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import SimpleReactValidator from 'simple-react-validator';
+import { GoogleSignin, statusCodes, User } from '@react-native-google-signin/google-signin';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
@@ -36,6 +37,24 @@ const LoginScreen = () => {
     } else {
       validator.current.showMessages();
       forceUpdate({});
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo: User = await GoogleSignin.signIn();
+      // You can now use userInfo (e.g., send to backend or store in state)
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        // play services not available or outdated
+      } else {
+        // some other error
+      }
     }
   };
 
@@ -136,7 +155,7 @@ const LoginScreen = () => {
             </View>
 
             {/* Google Sign In */}
-            <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.googleButton} activeOpacity={0.8} onPress={handleGoogleSignIn}>
               <Text style={styles.googleIcon}>G</Text>
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
