@@ -12,6 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { signup } from '../services/api';
+import { saveToken } from '../utils/auth';
 
 const CreateAccountScreen = () => {
   const navigation = useNavigation();
@@ -87,10 +89,24 @@ const CreateAccountScreen = () => {
   const handleCreateAccount = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
-    // Your account creation logic here
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+    try {
+      const res = await signup({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        mobile: formData.phone,
+        address: formData.address,
+      });
+      if (res.token) {
+        await saveToken(res.token);
+        navigation.replace('Home');
+      } else {
+        alert(res.message || 'Signup failed');
+      }
+    } catch (err) {
+      alert('Signup error');
+    }
+    setIsLoading(false);
   };
 
   return (

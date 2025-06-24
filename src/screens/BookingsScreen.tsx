@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Alert, RefreshControl, StatusBar } from 'react-native';
 import { Card } from '../components/common';
 import { COLORS } from '../constants/colors';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useNavigation } from '@react-navigation/native';
+import { getMyBookings, cancelBooking } from '../services/api';
+import { getToken } from '../utils/auth';
 
 const ROOM_ID_TO_NAME: Record<string, string> = {
   '1': 'Reading Hall',
@@ -36,34 +38,25 @@ const canEditOrDelete = (fromDate: string) => {
 const BookingsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const userId = 'user1'; // Hardcoded for now
-  const userBookings = useSelector((state: RootState) => state.booking.userBookings[userId] || []);
   const navigation = useNavigation<any>();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Group bookings only by room
-  const groupedByRoom: Record<string, { roomId: string; seatNumbers: number[]; from: string; to: string }> = {};
-  userBookings.forEach(b => {
-    if (!groupedByRoom[b.roomId]) {
-      groupedByRoom[b.roomId] = {
-        roomId: b.roomId,
-        seatNumbers: [...b.seatNumbers],
-        from: b.fromDate,
-        to: b.toDate,
-      };
-    } else {
-      groupedByRoom[b.roomId].seatNumbers = Array.from(new Set([...groupedByRoom[b.roomId].seatNumbers, ...b.seatNumbers]));
-      if (b.fromDate < groupedByRoom[b.roomId].from) groupedByRoom[b.roomId].from = b.fromDate;
-      if (b.toDate > groupedByRoom[b.roomId].to) groupedByRoom[b.roomId].to = b.toDate;
-    }
-  });
-  const bookings = Object.values(groupedByRoom).map((b, idx) => ({
-    id: idx.toString(),
-    library: ROOM_ID_TO_NAME[b.roomId] || b.roomId,
-    seats: b.seatNumbers.length,
-    from: b.from,
-    to: b.to,
-    roomId: b.roomId,
-    seatNumbers: b.seatNumbers,
-  }));
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoading(true);
+      try {
+        const token = await getToken();
+        const res = await getMyBookings(token!);
+        setBookings(res);
+      } catch (err) {
+        setError('Failed to load bookings');
+      }
+      setLoading(false);
+    };
+    fetchBookings();
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -71,20 +64,34 @@ const BookingsScreen = () => {
   };
 
   const handleEdit = (id: string) => {
-    const booking = bookings.find(b => b.id === id);
+    const booking = bookings.find(b => b._id === id);
     if (!booking) return;
     const room = LIBRARY_ROOMS.find(r => r.id === booking.roomId);
     navigation.navigate('SeatBooking', {
       roomId: booking.roomId,
-      roomName: booking.library,
+      roomName: booking.libraryId?.name || booking.libraryId,
       total: room ? room.total : 30,
-      selectedSeats: booking.seatNumbers,
-      startDate: booking.from,
-      endDate: booking.to,
+      selectedSeats: booking.seatIds,
+      startDate: booking.fromDate,
+      endDate: booking.toDate,
     });
   };
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete', `Delete booking ${id}`);
+  const handleDelete = async (id: string) => {
+    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
+      { text: 'No' },
+      { text: 'Yes', onPress: async () => {
+        try {
+          const token = await getToken();
+          await cancelBooking(token!, id);
+          // Refresh bookings
+          const res = await getMyBookings(token!);
+          setBookings(res);
+          Alert.alert('Booking cancelled');
+        } catch (err) {
+          Alert.alert('Failed to cancel booking');
+        }
+      }}
+    ]);
   };
 
   return (
@@ -124,11 +131,11 @@ const BookingsScreen = () => {
           </>
         }
         data={bookings}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item._id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => {
-          const editable = canEditOrDelete(item.from);
+          const editable = canEditOrDelete(item.fromDate);
           return (
             <View style={styles.bookingCard}>
               <View style={styles.bookingHeader}>
@@ -136,25 +143,25 @@ const BookingsScreen = () => {
                   <Text style={styles.bookingIcon}>📚</Text>
                 </View>
                 <View style={styles.bookingInfo}>
-                  <Text style={styles.libraryName}>{item.library}</Text>
-                  <Text style={styles.bookingCapacity}>Seats: {item.seats}</Text>
+                  <Text style={styles.libraryName}>{item.libraryId?.name || item.libraryId}</Text>
+                  <Text style={styles.bookingCapacity}>Seats: {item.seatIds.length}</Text>
                 </View>
               </View>
               <View style={styles.row}>
-                <Text style={styles.label}>From: <Text style={styles.value}>{item.from}</Text></Text>
-                <Text style={styles.label}>To: <Text style={styles.value}>{item.to}</Text></Text>
+                <Text style={styles.label}>From: <Text style={styles.value}>{item.fromDate}</Text></Text>
+                <Text style={styles.label}>To: <Text style={styles.value}>{item.toDate}</Text></Text>
               </View>
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={[styles.actionBtn, !editable && styles.actionBtnDisabled]}
-                  onPress={() => handleEdit(item.id)}
+                  onPress={() => handleEdit(item._id)}
                   disabled={!editable}
                 >
                   <Text style={[styles.actionIcon, { color: editable ? '#22C55E' : COLORS.placeholder }]}>📝</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, !editable && styles.actionBtnDisabled]}
-                  onPress={() => handleDelete(item.id)}
+                  onPress={() => handleDelete(item._id)}
                   disabled={!editable}
                 >
                   <Text style={[styles.actionIcon, { color: editable ? '#EF4444' : COLORS.placeholder }]}>🗑️</Text>

@@ -16,6 +16,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import SimpleReactValidator from 'simple-react-validator';
 import { GoogleSignin, statusCodes, User } from '@react-native-google-signin/google-signin';
+import { login } from '../services/api';
+import { saveToken } from '../utils/auth';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
@@ -30,10 +32,18 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     if (validator.current.allValid()) {
       setIsLoading(true);
-      // Your login logic here
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1500);
+      try {
+        const res = await login({ email, password });
+        if (res.token) {
+          await saveToken(res.token);
+          navigation.replace('Home');
+        } else {
+          alert(res.message || 'Login failed');
+        }
+      } catch (err) {
+        alert('Login error');
+      }
+      setIsLoading(false);
     } else {
       validator.current.showMessages();
       forceUpdate({});

@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Button } from '../components/common';
 import { COLORS } from '../constants/colors';
+import { getProfile, updateProfile } from '../services/api';
+import { getToken, removeToken } from '../utils/auth';
 
 const ProfileScreen = () => {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const token = await getToken();
+        const res = await getProfile(token!);
+        setProfile(res);
+      } catch (err) {
+        setError('Failed to load profile');
+      }
+      setLoading(false);
+    };
+    fetchProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    await removeToken();
+    // @ts-ignore
+    navigation.replace('Login');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
@@ -44,7 +71,7 @@ const ProfileScreen = () => {
             <Text style={styles.menuText}>Settings</Text>
           </TouchableOpacity>
         </View>
-        <Button text="Log Out" onPress={() => {}} style={styles.logoutButton} textStyle={styles.logoutText} />
+        <Button text="Log Out" onPress={handleLogout} style={styles.logoutButton} textStyle={styles.logoutText} />
       </ScrollView>
     </SafeAreaView>
   );

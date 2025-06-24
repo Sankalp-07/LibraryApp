@@ -8,6 +8,8 @@ import { Calendar } from 'react-native-calendars';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import { bookSeats, editBooking } from '../store/bookingSlice';
+import { getSeats, updateBooking } from '../services/api';
+import { getToken } from '../utils/auth';
 
 // Navigation params type
 export type SeatBookingParams = {
@@ -39,6 +41,10 @@ const SeatBookingScreen = () => {
     startDate: startDate || null,
     endDate: endDate || null,
   });
+
+  const [apiSeats, setApiSeats] = useState([]);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
 
   // Helper to get all booked seats for the selected room on any date
   const getBookedSeatsAnyDate = () => {
@@ -108,6 +114,21 @@ const SeatBookingScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, roomId, NUM_ROWS, NUM_COLS, total]);
 
+  useEffect(() => {
+    const fetchSeats = async () => {
+      setApiLoading(true);
+      try {
+        const token = await getToken();
+        const seats = await getSeats(roomId, token!);
+        setApiSeats(seats);
+      } catch (err) {
+        setApiError('Failed to load seats');
+      }
+      setApiLoading(false);
+    };
+    fetchSeats();
+  }, [roomId]);
+
   const [calendarVisible, setCalendarVisible] = useState(false);
 
   // Helper to get marked dates for period marking
@@ -167,7 +188,7 @@ const SeatBookingScreen = () => {
   };
 
   // Book button logic
-  const handleBook = () => {
+  const handleBook = async () => {
     const selectedSeats: number[] = [];
     seats.forEach((row, rIdx) => {
       row.forEach((seat, cIdx) => {
@@ -184,25 +205,37 @@ const SeatBookingScreen = () => {
       Alert.alert('Select at least one seat');
       return;
     }
-    // Dispatch booking to Redux
-    if (bookingId) {
-      dispatch(editBooking({
-        userId,
-        roomId,
-        seatNumbers: selectedSeats,
-        fromDate: selectedRange.startDate,
-        toDate: selectedRange.endDate,
-      }));
-    } else {
-      dispatch(bookSeats({
-        userId,
-        roomId,
-        seatNumbers: selectedSeats,
-        fromDate: selectedRange.startDate,
-        toDate: selectedRange.endDate,
-      }));
+    try {
+      const token = await getToken();
+      if (bookingId) {
+        const res = await updateBooking(token!, bookingId, {
+          seatIds: selectedSeats,
+          fromDate: selectedRange.startDate,
+          toDate: selectedRange.endDate,
+        });
+        if (res._id) {
+          Alert.alert('Booking updated');
+          navigation.goBack();
+        } else {
+          Alert.alert(res.message || 'Update failed');
+        }
+      } else {
+        const res = await bookSeats(token!, {
+          libraryId: roomId,
+          seatIds: selectedSeats,
+          fromDate: selectedRange.startDate,
+          toDate: selectedRange.endDate,
+        });
+        if (res._id) {
+          Alert.alert('Booking successful');
+          navigation.goBack();
+        } else {
+          Alert.alert(res.message || 'Booking failed');
+        }
+      }
+    } catch (err) {
+      Alert.alert('Booking error');
     }
-    Alert.alert('Booking Confirmed', `Seats: ${selectedSeats.length}\nFrom: ${selectedRange.startDate}\nTo: ${selectedRange.endDate}`);
   };
 
   return (

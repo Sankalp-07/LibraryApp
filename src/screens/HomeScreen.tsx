@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   StatusBar,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
+import { getLibraries } from '../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -22,18 +24,27 @@ type Room = {
   available?: number;
 };
 
-const LIBRARY_ROOMS: Room[] = [
-  { id: '1', name: 'Reading Hall', total: 30 },
-  { id: '2', name: 'Reference Room', total: 20 },
-  { id: '3', name: 'Children Section', total: 25 },
-  { id: '4', name: 'Study Room A', total: 12 },
-  { id: '5', name: 'Study Room B', total: 10 },
-  { id: '6', name: 'Multimedia Room', total: 8 },
-  { id: '7', name: 'Silent Zone', total: 15 },
-];
-
 const HomeScreen = ({ navigation }: { navigation: any }) => {
+  const [libraries, setLibraries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const bookings = useSelector((state: RootState) => state.booking.bookings);
+
+  useEffect(() => {
+    const fetchLibraries = async () => {
+      setLoading(true);
+      try {
+        const libs = await getLibraries();
+        setLibraries(libs);
+      } catch (err) {
+        Alert.alert('Error', String(err))
+        setError('Failed to load libraries');
+      }
+      setLoading(false);
+    };
+    fetchLibraries();
+  }, []);
 
   const getRoomStats = (room: Room): Room => {
     const roomBookings = bookings[room.id] || {};
@@ -48,7 +59,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
     return { ...room, booked, available };
   };
 
-  const roomsWithStats: Room[] = LIBRARY_ROOMS.map(getRoomStats);
+  const roomsWithStats: Room[] = libraries.map(getRoomStats);
 
   const getTotalStats = () => {
     const totalSeats = roomsWithStats.reduce((sum, room) => sum + room.total, 0);
@@ -174,7 +185,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         <View style={styles.roomsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Library Rooms</Text>
-            <Text style={styles.roomCount}>{LIBRARY_ROOMS.length} rooms</Text>
+            <Text style={styles.roomCount}>{libraries.length} rooms</Text>
           </View>
           
           <View style={styles.roomsList}>
