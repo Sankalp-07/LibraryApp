@@ -25,7 +25,7 @@ type Room = {
 };
 
 const HomeScreen = ({ navigation }: { navigation: any }) => {
-  const [libraries, setLibraries] = useState([]);
+  const [libraries, setLibraries] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,8 +36,10 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
       setLoading(true);
       try {
         const libs = await getLibraries();
+        console.log('libs -->',libs);
         setLibraries(libs);
       } catch (err) {
+        console.log('err -->',err);
         Alert.alert('Error', String(err))
         setError('Failed to load libraries');
       }
@@ -62,7 +64,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
   const roomsWithStats: Room[] = libraries.map(getRoomStats);
 
   const getTotalStats = () => {
-    const totalSeats = roomsWithStats.reduce((sum, room) => sum + room.total, 0);
+    const totalSeats = roomsWithStats.reduce((sum, room) => sum + (room.total || 0), 0);
     const totalAvailable = roomsWithStats.reduce((sum, room) => sum + (room.available || 0), 0);
     const totalBooked = roomsWithStats.reduce((sum, room) => sum + (room.booked || 0), 0);
     return { totalSeats, totalAvailable, totalBooked };
@@ -81,7 +83,10 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
   const handleProfilePress = () => {
   };
 
-  const renderRoomCard = (room: Room) => (
+  const renderRoomCard = (room: Room) => {
+    console.log('room -->',room);
+    Alert.alert(JSON.stringify(room));
+    return (
     <TouchableOpacity
       key={room.id}
       style={styles.roomCard}
@@ -123,7 +128,8 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         </View>
       </View>
     </TouchableOpacity>
-  );
+    )
+  };
 
   return (
     <SafeAreaView style={styles.container}>
